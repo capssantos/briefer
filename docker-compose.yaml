@@ -29,49 +29,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - app_code:/app  # Volume para código, evitando erros de diretório
-
-  jupyter_server:
-    image: briefercloud/briefer-jupyter
-    labels:
-      'cloud.briefer.jupyter-container': 'true'
-    build:
-      context: apps/api
-      dockerfile: jupyter.Dockerfile
-    command: 
-      - sh
-      - -c
-      - 'jupyter server --ip=0.0.0.0 --ZMQChannelsWebsocketConnection.iopub_data_rate_limit=1.0e10 --ZMQChannelsWebsocketConnection.iopub_msg_rate_limit=1.0e6 --ServerApp.max_body_size=107374182400'
-    environment:
-      JUPYTER_TOKEN: ${JUPYTER_TOKEN:?error}
-    volumes:
-      - jupyter:/home/jupyteruser
-    restart: always
-    healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:8888/api || exit 1']
-      interval: 5s
-      timeout: 10s
-      retries: 5
-
-  ai:
-    image: briefercloud/briefer-ai
-    build:
-      context: ai
-      dockerfile: Dockerfile
-    environment:
-      BASIC_AUTH_USERNAME: ${AI_BASIC_AUTH_USERNAME:?error}
-      BASIC_AUTH_PASSWORD: ${AI_BASIC_AUTH_PASSWORD:?error}
-      OPENAI_DEFAULT_MODEL_NAME: 'gpt-4o'
-      OPENAI_API_KEY: ${OPENAI_API_KEY:?error}
-      PORT: 8000
-    restart: always
-    healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:8000/ping || exit 1']
-      interval: 5s
-      timeout: 10s
-      retries: 5
-    volumes:
-      - app_code:/app  # Volume compartilhado para evitar erro de diretório
+      - briefer_code:/app  # 🔥 Corrige erro de diretório
 
   web:
     image: briefercloud/briefer-web
@@ -84,7 +42,7 @@ services:
       api:
         condition: service_healthy
     volumes:
-      - app_code:/app  # Garante que o código esteja acessível corretamente
+      - briefer_code:/app  # 🔥 Corrige erro de diretório
 
   api:
     image: briefercloud/briefer-api
@@ -96,23 +54,11 @@ services:
       LOG_LEVEL: 'debug'
       API_URL: '/api'
       FRONTEND_URL: '/'
-      LOGIN_JWT_SECRET: ${LOGIN_JWT_SECRET:?error}
-      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?error}
-      AI_API_URL: 'http://ai:8000'
-      AI_API_USERNAME: ${AI_BASIC_AUTH_USERNAME:?error}
-      AI_API_PASSWORD: ${AI_BASIC_AUTH_PASSWORD:?error}
-      PYTHON_ALLOWED_LIBRARIES: 'plotly,matplotlib,numpy,pandas'
       POSTGRES_USERNAME: ${POSTGRES_USERNAME:?error}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?error}
       POSTGRES_HOSTNAME: 'postgres'
       POSTGRES_PORT: '5432'
       POSTGRES_DATABASE: 'briefer'
-      ENVIRONMENT_VARIABLES_ENCRYPTION_KEY: ${ENVIRONMENT_VARIABLES_ENCRYPTION_KEY:?error}
-      WORKSPACE_SECRETS_ENCRYPTION_KEY: ${WORKSPACE_SECRETS_ENCRYPTION_KEY:?error}
-      DATASOURCES_ENCRYPTION_KEY: ${DATASOURCES_ENCRYPTION_KEY:?error}
-      JUPYTER_HOST: 'jupyter_server'
-      JUPYTER_PORT: 8888
-      JUPYTER_TOKEN: ${JUPYTER_TOKEN:?error}
     healthcheck:
       test: ['CMD-SHELL', 'curl -f http://localhost:8080/readyz || exit 1']
       interval: 5s
@@ -121,15 +67,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db_migration:
-        condition: service_completed_successfully
-      jupyter_server:
-        condition: service_healthy
-        restart: true
-      ai:
-        condition: service_healthy
     volumes:
-      - app_code:/app  # Volume corrigindo erro de diretório
+      - briefer_code:/app  # 🔥 Corrige erro de diretório
 
   nginx:
     image: nginx:1.27
@@ -143,6 +82,6 @@ services:
     restart: always
 
 volumes:
-  jupyter:
+  briefer_code:
+    driver: local  # 🔥 Garante que um volume válido seja montado
   postgres_data:
-  app_code:  # Volume para código-fonte, evitando erro "Not a directory"
